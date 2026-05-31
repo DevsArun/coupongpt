@@ -1,0 +1,57 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+build/
+dist/
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+coverage.xml
+.tox/
+
+# ---- Node / Tailwind ----
+node_modules/
+frontend/public/assets/css/app.css
+npm-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ---- PHP ----
+vendor/
+composer.lock
+
+# ---- Env & secrets ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# ---- Editor / OS ----
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ---- Runtime / data ----
+data/
+*.log
+logs/
+meili_data/
+mysql_data/
+redis_data/
+*.sqlite3
+uploads/

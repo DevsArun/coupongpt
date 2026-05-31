@@ -1,0 +1,32 @@
+# =====================================================================
+# CouponGPT backend — single image, runs on Hugging Face Spaces or VPS.
+# HF Spaces expects the app to listen on $PORT (default 7860); we honour it.
+# =====================================================================
+FROM python:3.11-slim AS base
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /app
+
+# System deps for asyncmy (MySQL) and lxml
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential default-libmysqlclient-dev pkg-config \
+        libxml2-dev libxslt1-dev curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY . .
+
+# Non-root user
+RUN useradd -m appuser && chown -R appuser:appuser /app
+USER appuser
+
+EXPOSE 8000
+# PORT lets HF Spaces (7860) and other hosts override the listen port.
+ENV PORT=8000
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]
