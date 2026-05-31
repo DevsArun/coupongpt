@@ -7,11 +7,13 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import health
+from app.api.v1.endpoints import auth, health, search
 
 api_router = APIRouter()
 
 api_router.include_router(health.router)
+api_router.include_router(auth.router)
+api_router.include_router(search.router)
 
-# Feature routers (auth, search, coupons, billing, admin, user) are registered
+# Feature routers (coupons, billing, admin, user) are registered
 # here as each phase lands. See app/api/v1/endpoints/.
