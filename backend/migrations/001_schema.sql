@@ -84,7 +84,7 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
     token_hash  CHAR(64)        NOT NULL,                  -- sha256 of the raw token
     family_id   CHAR(36)        NOT NULL,                  -- rotation family for reuse detection
     user_agent  VARCHAR(255)    NULL,
-    ip_address  VARBINARY(16)   NULL,
+    ip_address  VARCHAR(45)     NULL,                       -- IPv4/IPv6 textual form
     revoked_at  TIMESTAMP       NULL,
     expires_at  TIMESTAMP       NOT NULL,
     created_at  TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -115,7 +115,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     action       VARCHAR(128)    NOT NULL,                 -- e.g. coupon.update, subscription.cancel
     entity_type  VARCHAR(64)     NULL,
     entity_id    VARCHAR(64)     NULL,
-    ip_address   VARBINARY(16)   NULL,
+    ip_address   VARCHAR(45)     NULL,                      -- IPv4/IPv6 textual form
     user_agent   VARCHAR(255)    NULL,
     metadata     JSON            NULL,
     created_at   TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -63,7 +63,7 @@ class RefreshToken(PKMixin, CreatedAtMixin, Base):
     token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     family_id: Mapped[str] = mapped_column(String(36), nullable=False)
     user_agent: Mapped[str | None] = mapped_column(String(255))
-    ip_address: Mapped[bytes | None] = mapped_column(String(45))
+    ip_address: Mapped[str | None] = mapped_column(String(45))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime)
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 

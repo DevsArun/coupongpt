@@ -31,7 +31,7 @@ $hasCode = !empty($c['code']);
       <button onclick="cgptReveal(this, '<?= e($uuid) ?>')" data-code="<?= e($c['code']) ?>"
         class="btn-accent px-4 py-2 text-sm flex-1 font-mono tracking-wider">Reveal code</button>
     <?php else: ?>
-      <a href="/proxy?path=<?= urlencode('/coupons/' . $uuid . '/go') ?>" target="_blank" rel="noopener"
+      <a href="/out/<?= e($uuid) ?>" target="_blank" rel="noopener"
         class="btn-accent px-4 py-2 text-sm flex-1 text-center">Get deal</a>
     <?php endif; ?>
     <button onclick="cgptFeedback('<?= e($uuid) ?>', true)" title="Worked" class="btn-ghost px-3 py-2 text-sm">👍</button>

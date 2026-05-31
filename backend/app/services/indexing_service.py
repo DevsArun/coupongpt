@@ -21,15 +21,16 @@ logger = get_logger("indexing_service")
 
 
 async def _document_for(db: AsyncSession, coupon: Coupon) -> dict:
-    merchant = coupon.merchant
-    if merchant is None:
-        merchant = (
-            await db.execute(
-                select(Merchant)
-                .where(Merchant.id == coupon.merchant_id)
-                .options(selectinload(Merchant.aliases))
-            )
-        ).scalar_one()
+    # Always load the merchant explicitly (with aliases). Accessing the lazy
+    # ``coupon.merchant`` relationship on a freshly-created/flushed object would
+    # trigger an implicit IO load, which raises under async SQLAlchemy.
+    merchant = (
+        await db.execute(
+            select(Merchant)
+            .where(Merchant.id == coupon.merchant_id)
+            .options(selectinload(Merchant.aliases))
+        )
+    ).scalar_one()
     aliases = [a.alias for a in merchant.aliases] if merchant.aliases else []
     return coupon_to_document(coupon, merchant, merchant_aliases=aliases)
 

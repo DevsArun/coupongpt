@@ -26,14 +26,20 @@ REFRESH_TOKEN_TYPE = "refresh"
 # ---------------------------------------------------------------------
 # Passwords
 # ---------------------------------------------------------------------
+def _pw_bytes(password: str) -> bytes:
+    # bcrypt only considers the first 72 bytes and raises on longer inputs in
+    # bcrypt>=4, so truncate explicitly to keep hashing deterministic and safe.
+    return password.encode("utf-8")[:72]
+
+
 def hash_password(password: str) -> str:
     salt = bcrypt.gensalt(rounds=settings.password_bcrypt_rounds)
-    return bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
+    return bcrypt.hashpw(_pw_bytes(password), salt).decode("utf-8")
 
 
 def verify_password(password: str, password_hash: str) -> bool:
     try:
-        return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))
+        return bcrypt.checkpw(_pw_bytes(password), password_hash.encode("utf-8"))
     except (ValueError, TypeError):
         return False
 

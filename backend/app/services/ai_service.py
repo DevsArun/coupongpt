@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.base import ProviderConfig
@@ -83,7 +83,7 @@ async def usage_summary(db: AsyncSession, *, days: int = 7) -> list[dict]:
         select(
             AIUsageLog.provider,
             func.count().label("calls"),
-            func.sum(func.if_(AIUsageLog.success, 1, 0)).label("successes"),
+            func.sum(case((AIUsageLog.success.is_(True), 1), else_=0)).label("successes"),
             func.coalesce(func.avg(AIUsageLog.latency_ms), 0).label("avg_latency"),
         )
         .where(AIUsageLog.created_at >= since)
