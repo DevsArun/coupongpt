@@ -38,8 +38,13 @@ async def structure_coupon(
 
     user_prompt = COUPON_STRUCTURING_USER.format(merchant=merchant_name, raw_text=text[:3000])
     try:
+        from app.services.ai_service import log_usage
+
         completion = await get_router().complete_json(
-            COUPON_STRUCTURING_SYSTEM, user_prompt, operation="coupon_structuring"
+            COUPON_STRUCTURING_SYSTEM,
+            user_prompt,
+            operation="coupon_structuring",
+            usage_sink=log_usage,
         )
         data = completion.data
     except Exception as exc:  # noqa: BLE001 - graceful fallback

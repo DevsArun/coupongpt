@@ -40,6 +40,17 @@ async def lifespan(app: FastAPI):
     except Exception as exc:  # pragma: no cover - depends on live Meilisearch
         logger.warning("meili_init_skipped", error=str(exc))
 
+    # Best-effort: configure the AI router from DB provider settings.
+    try:
+        from app.core.database import SessionFactory
+        from app.services.ai_service import refresh_router
+
+        async with SessionFactory() as db:
+            chain = await refresh_router(db)
+        logger.info("ai_router_configured", chain=chain)
+    except Exception as exc:  # pragma: no cover - depends on live DB
+        logger.warning("ai_router_init_skipped", error=str(exc))
+
     yield
 
     logger.info("shutdown")

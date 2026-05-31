@@ -103,8 +103,13 @@ async def _ai_understand(query: str, merchant_hints: list[str]) -> dict | None:
         query=query, merchant_hints=", ".join(merchant_hints[:25]) or "(none)"
     )
     try:
+        from app.services.ai_service import log_usage
+
         completion = await router.complete_json(
-            QUERY_UNDERSTANDING_SYSTEM, user_prompt, operation="query_understanding"
+            QUERY_UNDERSTANDING_SYSTEM,
+            user_prompt,
+            operation="query_understanding",
+            usage_sink=log_usage,
         )
     except Exception as exc:  # noqa: BLE001 - graceful degradation to heuristics
         logger.warning("ai_understanding_failed", error=str(exc))
