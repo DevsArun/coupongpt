@@ -38,6 +38,15 @@ final class BackendClient
         if ($token) {
             $headers[] = 'Authorization: Bearer ' . $token;
         }
+        // Forward the real browser IP so the backend (with TRUST_PROXY_HEADERS=true)
+        // applies rate limits / anonymous quotas per end-user, not per frontend host.
+        if (function_exists('client_ip')) {
+            $ip = client_ip();
+            if ($ip) {
+                $headers[] = 'X-Forwarded-For: ' . $ip;
+                $headers[] = 'X-Real-IP: ' . $ip;
+            }
+        }
         foreach ($options['headers'] ?? [] as $h) {
             $headers[] = $h;
         }

@@ -27,11 +27,14 @@ logger = get_logger("worker")
 
 async def _run_ingest() -> None:
     from app.ingestion.pipeline import run_due_sources
+    from app.services.alerts_service import run_alert_matching
 
     async with SessionFactory() as db:
         job_ids = await run_due_sources(db, limit=20)
+        # New coupons may match user alerts — fire notifications right after.
+        fired = await run_alert_matching(db)
         await db.commit()
-        logger.info("scheduler_ingest", jobs=len(job_ids))
+        logger.info("scheduler_ingest", jobs=len(job_ids), alerts_fired=fired)
 
 
 async def _run_expire() -> None:

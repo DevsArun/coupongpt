@@ -59,6 +59,9 @@ services:
       MYSQL_HOST: mysql
       REDIS_HOST: redis
       MEILI_HOST: http://meilisearch:7700
+      # The PHP frontend is the trusted hop; honour its X-Forwarded-For so
+      # rate limits / anonymous quotas apply per end-user, not per frontend host.
+      TRUST_PROXY_HEADERS: "true"
     ports:
       - "8000:8000"
     depends_on:

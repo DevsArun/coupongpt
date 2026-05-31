@@ -140,11 +140,13 @@ async def sync_synonyms() -> None:
 
 async def ingest() -> None:
     from app.ingestion.pipeline import run_due_sources
+    from app.services.alerts_service import run_alert_matching
 
     async with SessionFactory() as db:
         job_ids = await run_due_sources(db, limit=20)
+        fired = await run_alert_matching(db)
         await db.commit()
-        print(f"Ran ingestion for {len(job_ids)} sources (jobs: {job_ids}).")
+        print(f"Ran ingestion for {len(job_ids)} sources (jobs: {job_ids}); fired {fired} alert(s).")
 
 
 async def expire() -> None:
@@ -154,6 +156,15 @@ async def expire() -> None:
         n = await expire_stale(db)
         await db.commit()
         print(f"Expired {n} stale coupons.")
+
+
+async def run_alerts() -> None:
+    from app.services.alerts_service import run_alert_matching
+
+    async with SessionFactory() as db:
+        n = await run_alert_matching(db)
+        await db.commit()
+        print(f"Fired {n} deal-alert notification(s).")
 
 
 def _split_sql(sql: str) -> list[str]:
@@ -207,6 +218,7 @@ def main() -> None:
     sub.add_parser("reindex", help="Reindex active coupons into Meilisearch")
     sub.add_parser("sync-synonyms", help="Push DB synonyms to Meilisearch")
     sub.add_parser("ingest", help="Run due ingestion sources")
+    sub.add_parser("alerts", help="Match deal alerts and create notifications")
     sub.add_parser("expire", help="Mark stale coupons expired")
     p_admin = sub.add_parser("create-admin", help="Create or promote a super admin")
     p_admin.add_argument("email")
@@ -226,6 +238,8 @@ def main() -> None:
                 await sync_synonyms()
             elif args.command == "ingest":
                 await ingest()
+            elif args.command == "alerts":
+                await run_alerts()
             elif args.command == "expire":
                 await expire()
             elif args.command == "create-admin":

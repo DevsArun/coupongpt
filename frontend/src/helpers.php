@@ -37,6 +37,19 @@ function url(string $path = '/'): string
     return $path;
 }
 
+/** Best-effort real client IP (honours an upstream proxy's X-Forwarded-For). */
+function client_ip(): ?string
+{
+    $xff = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? '';
+    if ($xff !== '') {
+        $first = trim(explode(',', $xff)[0]);
+        if ($first !== '') {
+            return $first;
+        }
+    }
+    return $_SERVER['REMOTE_ADDR'] ?? null;
+}
+
 /** Format cents into a currency string. */
 function money(int $cents, string $currency = 'USD'): string
 {

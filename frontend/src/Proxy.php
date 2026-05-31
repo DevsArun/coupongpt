@@ -18,6 +18,7 @@ final class Proxy
         '/search', '/coupons', '/merchants', '/auth/me', '/auth/change-password',
         '/auth/logout-all', '/me/', '/me', '/billing/plans', '/billing/checkout',
         '/billing/change-plan', '/billing/cancel', '/billing/invoices', '/billing/payments',
+        '/billing/refund',
     ];
 
     /** Path prefixes that additionally require an admin-class role. */

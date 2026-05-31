@@ -57,6 +57,22 @@ async def register_user(
     )
     db.add(user)
     await db.flush()
+
+    # Record the referral so the referrer's stats reflect the conversion.
+    if referred_by:
+        from app.models.engagement import Referral
+
+        db.add(
+            Referral(
+                referrer_id=referred_by,
+                referred_id=user.id,
+                code=(referral_code or "").upper(),
+                status="converted",
+                converted_at=datetime.utcnow(),
+            )
+        )
+        await db.flush()
+
     # Reload with role + permissions eagerly populated.
     return await user_service.get_by_id(db, user.id)  # type: ignore[return-value]
 
