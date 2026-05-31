@@ -44,7 +44,10 @@ return static function (string $view, array $params = []): void {
             return;
 
         case 'pricing':
-            View::render('storefront/pricing', [], 'app');
+            $plans = $client->get('/billing/plans');
+            View::render('storefront/pricing', [
+                'plans' => $plans['body'] ?? [],
+            ], 'app');
             return;
 
         case 'coupon':

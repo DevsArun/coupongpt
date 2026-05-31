@@ -163,4 +163,42 @@
       window.toast('Could not record feedback.', 'error');
     }
   };
+
+  // ---- Admin table helpers ----
+  window.esc = function (v) {
+    return String(v == null ? '' : v).replace(/[&<>"]/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  };
+
+  /**
+   * Render a table. columns: [{key, label, render?(row)->html}]; rows: array.
+   */
+  window.renderTable = function (container, columns, rows, opts = {}) {
+    const el = typeof container === 'string' ? document.querySelector(container) : container;
+    if (!el) return;
+    if (!rows || !rows.length) {
+      el.innerHTML = '<div class="text-center text-slate-500 py-12">' + (opts.empty || 'No records found.') + '</div>';
+      return;
+    }
+    const head = columns.map((c) => `<th class="text-left font-medium text-slate-500 px-4 py-2.5">${c.label}</th>`).join('');
+    const body = rows.map((r) => '<tr class="border-t border-white/5 hover:bg-white/[0.03]">' +
+      columns.map((c) => `<td class="px-4 py-2.5 align-middle">${c.render ? c.render(r) : esc(r[c.key])}</td>`).join('') +
+      '</tr>').join('');
+    el.innerHTML = `<div class="card overflow-x-auto"><table class="w-full text-sm">
+      <thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+  };
+
+  window.statusPill = function (status) {
+    const map = {
+      active: 'text-emerald-400 bg-emerald-500/10', succeeded: 'text-emerald-400 bg-emerald-500/10',
+      paid: 'text-emerald-400 bg-emerald-500/10', processed: 'text-emerald-400 bg-emerald-500/10',
+      pending_review: 'text-amber-400 bg-amber-500/10', pending: 'text-amber-400 bg-amber-500/10',
+      queued: 'text-sky-400 bg-sky-500/10', running: 'text-sky-400 bg-sky-500/10',
+      failed: 'text-rose-400 bg-rose-500/10', expired: 'text-slate-400 bg-slate-500/10',
+      revoked: 'text-rose-400 bg-rose-500/10', canceled: 'text-slate-400 bg-slate-500/10',
+      suspended: 'text-rose-400 bg-rose-500/10', past_due: 'text-amber-400 bg-amber-500/10',
+    };
+    const cls = map[status] || 'text-slate-300 bg-white/5';
+    return `<span class="badge ${cls}">${esc(status)}</span>`;
+  };
 })();

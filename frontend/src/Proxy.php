@@ -15,7 +15,9 @@ final class Proxy
 {
     /** Path prefixes any authenticated user may reach. */
     private const USER_PREFIXES = [
-        '/search', '/coupons', '/merchants', '/auth/me', '/me/', '/billing/plans',
+        '/search', '/coupons', '/merchants', '/auth/me', '/auth/change-password',
+        '/auth/logout-all', '/me/', '/me', '/billing/plans', '/billing/checkout',
+        '/billing/change-plan', '/billing/cancel', '/billing/invoices', '/billing/payments',
     ];
 
     /** Path prefixes that additionally require an admin-class role. */
