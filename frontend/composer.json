@@ -1,0 +1,17 @@
+{
+  "name": "coupongpt/frontend",
+  "description": "CouponGPT PHP frontend (storefront, user dashboard, admin mission control)",
+  "type": "project",
+  "license": "proprietary",
+  "require": {
+    "php": ">=8.2",
+    "ext-curl": "*",
+    "ext-json": "*"
+  },
+  "autoload": {
+    "psr-4": { "App\\": "src/" }
+  },
+  "config": {
+    "optimize-autoloader": true
+  }
+}
