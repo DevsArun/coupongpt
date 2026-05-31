@@ -6,7 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload
 
 from app.api.deps import CurrentUser, DbSession, require_permission
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import NotFoundError, PermissionDeniedError
 from app.models.billing import Invoice, Payment, Subscription
 from app.models.rbac import Role
 from app.models.user import User
@@ -49,9 +49,18 @@ async def update_user(
     user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
     if user is None:
         raise NotFoundError("User not found.")
+
+    actor_is_super = actor.role is not None and actor.role.slug == "super_admin"
+    # Only a super admin may modify a super-admin account (prevents lockout/abuse).
+    if user.role is not None and user.role.slug == "super_admin" and not actor_is_super:
+        raise PermissionDeniedError("Only a super admin can modify a super-admin account.")
+
     if payload.status is not None:
         user.status = payload.status
     if payload.role_slug is not None:
+        # Granting elevated roles is restricted to super admins (no self-escalation).
+        if payload.role_slug in ("super_admin", "admin") and not actor_is_super:
+            raise PermissionDeniedError("Only a super admin can grant admin or super-admin roles.")
         role = (await db.execute(select(Role).where(Role.slug == payload.role_slug))).scalar_one_or_none()
         if role is None:
             raise NotFoundError("Role not found.")
