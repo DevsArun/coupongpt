@@ -108,6 +108,7 @@ and set `BACKEND_BASE_URL` to the backend's internal address.
 
 | Task | Command |
 |------|---------|
+| Apply DB migrations | `python -m app.cli migrate` |
 | Create/promote admin | `python -m app.cli create-admin EMAIL PASSWORD` |
 | Seed demo coupons | `python -m app.cli seed` |
 | Rebuild search index | `python -m app.cli reindex` |
@@ -117,7 +118,32 @@ and set `BACKEND_BASE_URL` to the backend's internal address.
 
 Schedule `ingest` and `expire` via cron / a scheduled job (e.g. every few hours).
 
-## 6. Backups & monitoring
+## 7. Production hardening checklist
+
+Before going live, set these (the backend **refuses to boot in production** —
+`APP_ENV=production` — if the secrets/CORS below are insecure):
+
+- [ ] Strong, unique `APP_SECRET_KEY`, `JWT_SECRET`, `MEILI_MASTER_KEY` (>=16 chars).
+- [ ] `APP_DEBUG=false`, `APP_ENV=production`.
+- [ ] `CORS_ORIGINS` set to your exact frontend origin(s) — never `*`.
+- [ ] `ALLOWED_HOSTS` set to your domains (enables host-header validation).
+- [ ] Behind a reverse proxy: `TRUST_PROXY_HEADERS=true` (so rate-limiting and
+      audit logs see the real client IP). The Dockerfile already runs uvicorn
+      with `--proxy-headers`.
+- [ ] `WEB_CONCURRENCY` > 1 (e.g. 2× vCPUs) for the API container.
+- [ ] Run the **scheduler** (`worker` service / `python -m app.worker`) with
+      `SCHEDULER_ENABLED=true` so ingestion, expiry, and payment retries run
+      automatically.
+- [ ] Email: set `EMAIL_BACKEND=smtp` + `SMTP_*` so password-reset links are
+      delivered (defaults to `console` which only logs them).
+- [ ] `APP_BASE_URL` set to the public frontend URL (used in reset links).
+- [ ] `SENTRY_DSN` set for error tracking.
+- [ ] TLS terminated at a reverse proxy — see `infra/nginx/coupongpt.conf`.
+- [ ] Configure real `STRIPE_*` / `RAZORPAY_*` keys + webhook secrets, and point
+      the gateway dashboards at `/api/v1/billing/webhooks/{stripe,razorpay}`.
+- [ ] Apply migrations: `python -m app.cli migrate` (managed DBs), then `reindex`.
+
+## 8. Backups & monitoring
 
 - **Backups:** nightly `mysqldump` (retain 7–30 days); Meilisearch is rebuildable
   from MySQL via `reindex`, so MySQL is the only stateful backup target.

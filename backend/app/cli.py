@@ -156,12 +156,54 @@ async def expire() -> None:
         print(f"Expired {n} stale coupons.")
 
 
+def _split_sql(sql: str) -> list[str]:
+    """Split a SQL script into individual statements on ';' terminators.
+
+    Full-line ``--`` comments are stripped *before* splitting so that semicolons
+    appearing inside comment text (e.g. "uniques uq_<table>_<cols>;") don't break
+    statement boundaries. Inline comments are left in place — MySQL parses them.
+    """
+    no_comments = "\n".join(
+        ln for ln in sql.splitlines() if not ln.lstrip().startswith("--")
+    )
+    statements: list[str] = []
+    for chunk in no_comments.split(";"):
+        cleaned = chunk.strip()
+        if cleaned:
+            statements.append(cleaned)
+    return statements
+
+
+async def migrate() -> None:
+    """Apply the SQL migrations in backend/migrations in filename order."""
+    import os
+
+    from app.core.database import engine
+
+    migrations_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "migrations")
+    files = sorted(f for f in os.listdir(migrations_dir) if f.endswith(".sql"))
+    if not files:
+        print("No migration files found.")
+        return
+
+    for fname in files:
+        path = os.path.join(migrations_dir, fname)
+        with open(path, encoding="utf-8") as fh:
+            statements = _split_sql(fh.read())
+        async with engine.begin() as conn:
+            for stmt in statements:
+                await conn.exec_driver_sql(stmt)
+        print(f"Applied {fname} ({len(statements)} statements).")
+    print("Migrations complete.")
+
+
 def main() -> None:
     configure_logging()
     parser = argparse.ArgumentParser(description="CouponGPT operational CLI")
     sub = parser.add_subparsers(dest="command", required=True)
 
     sub.add_parser("seed", help="Seed demo coupons")
+    sub.add_parser("migrate", help="Apply SQL migrations (schema + seed)")
     sub.add_parser("reindex", help="Reindex active coupons into Meilisearch")
     sub.add_parser("sync-synonyms", help="Push DB synonyms to Meilisearch")
     sub.add_parser("ingest", help="Run due ingestion sources")
@@ -176,6 +218,8 @@ def main() -> None:
         try:
             if args.command == "seed":
                 await seed_demo()
+            elif args.command == "migrate":
+                await migrate()
             elif args.command == "reindex":
                 await reindex()
             elif args.command == "sync-synonyms":

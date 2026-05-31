@@ -11,12 +11,13 @@ from app.api.deps import DbSession, OptionalUser
 from app.schemas.search import QuotaStatus, SearchResponse, Suggestion, SuggestResponse
 from app.search import service as search_service
 from app.services import quota_service
+from app.utils.net import get_client_ip
 
 router = APIRouter(prefix="/search", tags=["search"])
 
 
 def _client_ip(request: Request) -> str | None:
-    return request.client.host if request.client else None
+    return get_client_ip(request)
 
 
 @router.get("", response_model=SearchResponse, summary="AI coupon search")

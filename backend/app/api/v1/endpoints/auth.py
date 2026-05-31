@@ -8,9 +8,11 @@ from app.core.security import hash_password, verify_password
 from app.core.exceptions import ValidationAppError
 from app.schemas.auth import (
     AuthResponse,
+    ForgotPasswordRequest,
     LoginRequest,
     RefreshRequest,
     RegisterRequest,
+    ResetPasswordRequest,
     TokenPair,
 )
 from app.schemas.common import Message
@@ -22,7 +24,9 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 def _client_meta(request: Request) -> tuple[str | None, str | None]:
-    ip = request.client.host if request.client else None
+    from app.utils.net import get_client_ip
+
+    ip = get_client_ip(request)
     ua = request.headers.get("user-agent")
     return ip, ua
 
@@ -67,6 +71,19 @@ async def refresh(payload: RefreshRequest, request: Request, db: DbSession) -> T
 async def logout(payload: RefreshRequest, db: DbSession) -> Message:
     await auth_service.revoke_refresh_token(db, payload.refresh_token)
     return Message(message="Logged out.")
+
+
+@router.post("/forgot-password", response_model=Message)
+async def forgot_password(payload: ForgotPasswordRequest, db: DbSession) -> Message:
+    # Always returns the same message (no user enumeration).
+    await auth_service.request_password_reset(db, payload.email)
+    return Message(message="If that email exists, a reset link has been sent.")
+
+
+@router.post("/reset-password", response_model=Message)
+async def reset_password(payload: ResetPasswordRequest, db: DbSession) -> Message:
+    await auth_service.reset_password(db, payload.token, payload.new_password)
+    return Message(message="Password reset. Please sign in with your new password.")
 
 
 @router.post("/logout-all", response_model=Message)

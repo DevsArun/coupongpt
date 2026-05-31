@@ -38,6 +38,7 @@ razorpay==1.4.2
 
 # ---- Observability ----
 structlog==24.4.0
+sentry-sdk==2.19.2
 
 # ---- Testing (kept here for the single-image dev workflow) ----
 pytest==8.3.4

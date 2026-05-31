@@ -11,6 +11,13 @@ from functools import lru_cache
 from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Default secret placeholders that must never survive into a production deploy.
+_INSECURE_DEFAULTS = {
+    "app_secret_key": "change-me",
+    "jwt_secret": "change-me-jwt-secret",
+    "meili_master_key": "change-me-meili-master-key",
+}
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -84,6 +91,27 @@ class Settings(BaseSettings):
     log_json: bool = True
     sentry_dsn: str = ""
 
+    # ---- Production / serving ----
+    web_concurrency: int = 1
+    trust_proxy_headers: bool = False
+    allowed_hosts: str = "*"
+    app_base_url: str = "http://localhost:8080"  # used for links (e.g. password reset)
+
+    # ---- Email (password reset, notifications) ----
+    email_backend: str = "console"  # console | smtp
+    email_from: str = "CouponGPT <no-reply@coupongpt.local>"
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_use_tls: bool = True
+
+    # ---- Background scheduler (seconds; 0 disables a task) ----
+    scheduler_enabled: bool = False
+    ingest_interval_seconds: int = 21600  # 6h
+    expire_interval_seconds: int = 3600  # 1h
+    payment_retry_interval_seconds: int = 3600  # 1h
+
     # -----------------------------------------------------------------
     # Derived values
     # -----------------------------------------------------------------
@@ -115,9 +143,43 @@ class Settings(BaseSettings):
     def ai_priority_list(self) -> list[str]:
         return [p.strip().lower() for p in self.ai_provider_priority.split(",") if p.strip()]
 
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def allowed_hosts_list(self) -> list[str]:
+        return [h.strip() for h in self.allowed_hosts.split(",") if h.strip()] or ["*"]
+
     @property
     def is_production(self) -> bool:
         return self.app_env.lower() == "production"
+
+    # -----------------------------------------------------------------
+    # Fail-fast production validation
+    # -----------------------------------------------------------------
+    def production_problems(self) -> list[str]:
+        """Return a list of misconfigurations that are unsafe in production."""
+        problems: list[str] = []
+        for field, insecure in _INSECURE_DEFAULTS.items():
+            value = getattr(self, field, "")
+            if not value or value == insecure or len(str(value)) < 16:
+                problems.append(f"{field.upper()} must be set to a strong (>=16 char) secret")
+        if self.app_debug:
+            problems.append("APP_DEBUG must be false in production")
+        if "*" in self.cors_origin_list:
+            problems.append("CORS_ORIGINS must not be '*' in production")
+        if not self.cors_origin_list:
+            problems.append("CORS_ORIGINS must list your frontend origin(s)")
+        return problems
+
+    def validate_production(self) -> None:
+        """Raise if running in production with an unsafe configuration."""
+        if not self.is_production:
+            return
+        problems = self.production_problems()
+        if problems:
+            raise RuntimeError(
+                "Refusing to start in production with insecure configuration:\n  - "
+                + "\n  - ".join(problems)
+            )
 
 
 @lru_cache

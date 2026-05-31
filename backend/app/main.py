@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app import __version__
 from app.api.v1.router import api_router
@@ -27,9 +28,30 @@ from app.core.redis import close_redis
 logger = get_logger("main")
 
 
+def _init_sentry() -> None:
+    """Initialise Sentry error tracking if a DSN is configured."""
+    if not settings.sentry_dsn:
+        return
+    try:
+        import sentry_sdk
+
+        sentry_sdk.init(
+            dsn=settings.sentry_dsn,
+            environment=settings.app_env,
+            traces_sample_rate=0.1,
+            release=__version__,
+        )
+        logger.info("sentry_initialized")
+    except Exception as exc:  # pragma: no cover - optional dependency
+        logger.warning("sentry_init_failed", error=str(exc))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     configure_logging()
+    # Fail fast in production if secrets/CORS are misconfigured.
+    settings.validate_production()
+    _init_sentry()
     logger.info("startup", env=settings.app_env, version=__version__)
 
     # Best-effort: ensure the search index exists with the right settings.
@@ -70,6 +92,8 @@ def create_app() -> FastAPI:
     )
 
     # ---- Middleware (order matters: last added runs first) ----
+    if settings.allowed_hosts_list != ["*"]:
+        app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts_list)
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(RateLimitMiddleware)
     app.add_middleware(RequestContextMiddleware)

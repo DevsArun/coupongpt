@@ -82,6 +82,25 @@ services:
     depends_on:
       - backend
 
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      MYSQL_HOST: mysql
+      REDIS_HOST: redis
+      MEILI_HOST: http://meilisearch:7700
+      SCHEDULER_ENABLED: "true"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+    command: python -m app.worker
+
 volumes:
   mysql_data:
   redis_data:

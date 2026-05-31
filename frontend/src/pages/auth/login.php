@@ -38,6 +38,9 @@ include __DIR__ . '/../../partials/head.php';
           <input name="password" type="password" required
             class="mt-1 w-full card bg-black/20 px-4 py-2.5 outline-none focus:ring-2 focus:ring-accent" placeholder="••••••••">
         </div>
+        <div class="text-right -mt-2">
+          <a href="/forgot-password" class="text-xs text-accent2 hover:underline">Forgot password?</a>
+        </div>
         <button class="btn-accent w-full py-2.5 font-semibold">Sign in</button>
       </form>
 

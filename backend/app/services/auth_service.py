@@ -163,6 +163,65 @@ async def revoke_all_for_user(db: AsyncSession, user_id: int) -> None:
     )
 
 
+# ---------------------------------------------------------------------
+# Password reset
+# ---------------------------------------------------------------------
+async def request_password_reset(db: AsyncSession, email: str) -> None:
+    """Create a reset token and email a reset link.
+
+    Always returns silently (no user enumeration). The raw token is emailed; only
+    its hash is stored.
+    """
+    from datetime import timedelta
+
+    from app.models.user import PasswordReset
+    from app.services import email_service
+
+    user = await user_service.get_by_email(db, email.lower().strip())
+    if user is None:
+        return  # do not reveal whether the email exists
+
+    raw_token = security.generate_refresh_token()
+    db.add(
+        PasswordReset(
+            user_id=user.id,
+            token_hash=security.hash_token(raw_token),
+            expires_at=datetime.utcnow() + timedelta(hours=1),
+        )
+    )
+    await db.flush()
+
+    reset_url = f"{settings.app_base_url}/reset-password?token={raw_token}"
+    email_service.send_email(
+        user.email,
+        "Reset your CouponGPT password",
+        f"We received a request to reset your password.\n\n"
+        f"Reset it here (valid for 1 hour):\n{reset_url}\n\n"
+        f"If you didn't request this, you can ignore this email.",
+    )
+
+
+async def reset_password(db: AsyncSession, raw_token: str, new_password: str) -> None:
+    from app.models.user import PasswordReset
+
+    token_hash = security.hash_token(raw_token)
+    reset = (
+        await db.execute(select(PasswordReset).where(PasswordReset.token_hash == token_hash))
+    ).scalar_one_or_none()
+    if reset is None or reset.used_at is not None or reset.expires_at <= datetime.utcnow():
+        raise AuthenticationError("This reset link is invalid or has expired.")
+
+    user = await user_service.get_by_id(db, reset.user_id)
+    if user is None:
+        raise AuthenticationError("Account not found.")
+
+    user.password_hash = security.hash_password(new_password)
+    reset.used_at = datetime.utcnow()
+    await db.flush()
+    # Revoke all sessions after a password reset.
+    await revoke_all_for_user(db, user.id)
+
+
 async def _revoke_family(db: AsyncSession, family_id: str) -> None:
     await db.execute(
         update(RefreshToken)

@@ -28,5 +28,13 @@ USER appuser
 
 EXPOSE 8000
 # PORT lets HF Spaces (7860) and other hosts override the listen port.
-ENV PORT=8000
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]
+# WEB_CONCURRENCY controls worker count (set >1 in production behind a proxy).
+ENV PORT=8000 \
+    WEB_CONCURRENCY=1
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD curl -fsS "http://localhost:${PORT}/api/v1/health" || exit 1
+
+# --proxy-headers + --forwarded-allow-ips make X-Forwarded-For trustworthy behind
+# a reverse proxy/load balancer (pair with TRUST_PROXY_HEADERS=true).
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --workers ${WEB_CONCURRENCY} --proxy-headers --forwarded-allow-ips='*'"]

@@ -44,6 +44,8 @@ $router->get('/coupon/{uuid}', static fn ($p) => (require __DIR__ . '/../src/con
 // --- Auth ---------------------------------------------------------------
 $router->get('/login', static fn () => View::render('auth/login', [], 'blank'));
 $router->get('/register', static fn () => View::render('auth/register', [], 'blank'));
+$router->get('/forgot-password', static fn () => View::render('auth/forgot', [], 'blank'));
+$router->get('/reset-password', static fn () => View::render('auth/reset', [], 'blank'));
 $router->post('/login', static function (): void {
     Csrf::check();
     $res = Auth::login($_POST['email'] ?? '', $_POST['password'] ?? '');
@@ -73,6 +75,27 @@ $router->get('/logout', static function (): void {
     Auth::logout();
     flash('success', 'You have been signed out.');
     redirect('/');
+});
+
+// --- Password reset (public) -------------------------------------------
+$router->post('/forgot-password', static function (): void {
+    Csrf::check();
+    (new BackendClient())->post('/auth/forgot-password', ['email' => $_POST['email'] ?? '']);
+    flash('success', 'If that email exists, a reset link has been sent.');
+    redirect('/login');
+});
+$router->post('/reset-password', static function (): void {
+    Csrf::check();
+    $res = (new BackendClient())->post('/auth/reset-password', [
+        'token' => $_POST['token'] ?? '',
+        'new_password' => $_POST['new_password'] ?? '',
+    ]);
+    if ($res['ok']) {
+        flash('success', 'Password reset. Please sign in.');
+        redirect('/login');
+    }
+    flash('error', $res['error'] ?? 'Reset link is invalid or expired.');
+    redirect('/reset-password?token=' . urlencode($_POST['token'] ?? ''));
 });
 
 // --- Authenticated JSON proxy ------------------------------------------

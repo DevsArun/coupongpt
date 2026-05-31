@@ -12,6 +12,7 @@ from starlette.responses import JSONResponse, Response
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.core.redis import get_redis
+from app.utils.net import get_client_ip
 
 logger = get_logger("http")
 
@@ -73,7 +74,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if not request.url.path.startswith(settings.api_v1_prefix):
             return await call_next(request)
 
-        client_ip = request.client.host if request.client else "unknown"
+        client_ip = get_client_ip(request) or "unknown"
         window = int(time.time() // 60)
         key = f"rl:{client_ip}:{window}"
 
