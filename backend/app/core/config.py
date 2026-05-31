@@ -43,6 +43,9 @@ class Settings(BaseSettings):
     mysql_user: str = "coupongpt"
     mysql_password: str = "coupongpt_pw"
     mysql_database: str = "coupongpt"
+    # Async driver: aiomysql (pure-Python, no build step — ideal for HF Spaces)
+    # or asyncmy (faster at runtime, requires compilation).
+    mysql_driver: str = "aiomysql"
     database_url: str | None = None
 
     # ---- Redis ----
@@ -121,7 +124,7 @@ class Settings(BaseSettings):
         if self.database_url:
             return self.database_url
         return (
-            f"mysql+asyncmy://{self.mysql_user}:{self.mysql_password}"
+            f"mysql+{self.mysql_driver}://{self.mysql_user}:{self.mysql_password}"
             f"@{self.mysql_host}:{self.mysql_port}/{self.mysql_database}"
         )
 

@@ -6,6 +6,7 @@ Spaces, a VPS, or a dedicated server.
 """
 from __future__ import annotations
 
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -54,21 +55,24 @@ async def lifespan(app: FastAPI):
     _init_sentry()
     logger.info("startup", env=settings.app_env, version=__version__)
 
-    # Best-effort: ensure the search index exists with the right settings.
+    # Best-effort init of external services, each time-bounded so a slow/unreachable
+    # managed service (common on first boot) never blocks the Space from going live.
     try:
         from app.search.client import ensure_index
 
-        await ensure_index()
+        await asyncio.wait_for(ensure_index(), timeout=10)
     except Exception as exc:  # pragma: no cover - depends on live Meilisearch
         logger.warning("meili_init_skipped", error=str(exc))
 
-    # Best-effort: configure the AI router from DB provider settings.
     try:
         from app.core.database import SessionFactory
         from app.services.ai_service import refresh_router
 
-        async with SessionFactory() as db:
-            chain = await refresh_router(db)
+        async def _init_ai() -> None:
+            async with SessionFactory() as db:
+                return await refresh_router(db)
+
+        chain = await asyncio.wait_for(_init_ai(), timeout=10)
         logger.info("ai_router_configured", chain=chain)
     except Exception as exc:  # pragma: no cover - depends on live DB
         logger.warning("ai_router_init_skipped", error=str(exc))

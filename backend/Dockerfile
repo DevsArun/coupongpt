@@ -11,10 +11,10 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# System deps for asyncmy (MySQL) and lxml
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        build-essential default-libmysqlclient-dev pkg-config \
-        libxml2-dev libxslt1-dev curl \
+# Only curl is needed at runtime (healthcheck). All Python deps ship as wheels
+# (aiomysql, lxml, bcrypt, etc.) so no compiler/build toolchain is required —
+# this keeps Hugging Face Spaces builds fast and the image small.
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
@@ -22,13 +22,13 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-# Non-root user
-RUN useradd -m appuser && chown -R appuser:appuser /app
+# Non-root user (uid 1000 matches the Hugging Face Spaces convention).
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
 
+# HF Spaces routes to the port declared by `app_port` in the Space README.
+# Keep this in sync (this image + compose use 8000; set app_port: 8000).
 EXPOSE 8000
-# PORT lets HF Spaces (7860) and other hosts override the listen port.
-# WEB_CONCURRENCY controls worker count (set >1 in production behind a proxy).
 ENV PORT=8000 \
     WEB_CONCURRENCY=1
 
